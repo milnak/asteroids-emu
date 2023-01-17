@@ -755,12 +755,7 @@ void CPU6502::process_addressing_mode_immediate(Instruction instruction, uint8_t
         return;
     }
 
-    // switch (instruction)
-    // {
-    // default:
     fail_fast("Invalid instruction");
-    //     break;
-    // }
 }
 
 void CPU6502::set_resolved_byte(uint8_t addr, AddressingMode addressing_mode, uint8_t value)
@@ -800,6 +795,7 @@ void CPU6502::set_resolved_byte(uint8_t addr, AddressingMode addressing_mode, ui
         break;
     }
 }
+
 // returns true if handled.
 bool CPU6502::process_instruction(Instruction instruction, uint8_t M)
 {
@@ -952,6 +948,7 @@ void CPU6502::process_addressing_mode_absolute(Instruction instruction, uint16_t
     case Instruction::DEC:
         // M,Z,N = M-1
         M -= -1;
+
         _registers.set_psr_Z_if_zero(M);
         _registers.set_psr_N_if_negative(M);
 
@@ -960,6 +957,7 @@ void CPU6502::process_addressing_mode_absolute(Instruction instruction, uint16_t
     case Instruction::INC:
         // M,Z,N = M+1
         M += 1;
+
         _registers.set_psr_Z(M);
         _registers.set_psr_N_if_negative(M);
 
@@ -1189,7 +1187,7 @@ void CPU6502::process_addressing_mode_byte(uint8_t operand_value, Instruction in
         break;
     case Instruction::STY:
         // M = Y
-        set_resolved_byte(operand_value, addressing_mode, _registers.x());
+        set_resolved_byte(operand_value, addressing_mode, _registers.y());
         break;
     default:
         fail_fast("Invalid instruction");
