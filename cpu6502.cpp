@@ -652,7 +652,7 @@ void CPU6502::process_addressing_mode_accumulator(Instruction instruction)
     switch (instruction)
     {
     case Instruction::ASL:
-        // A,Z,C,N = M*2
+        // A,Z,C,N = A*2
 
         // Set to contents of old bit 7.
         _registers.set_psr_C(IS_BIT_SET(M, 7));
@@ -749,8 +749,70 @@ bool CPU6502::process_addressing_mode_relative(Instruction instruction)
 // Operand is the data, e.g. LDA #30 loads 30 into A.
 void CPU6502::process_addressing_mode_immediate(Instruction instruction, uint8_t M)
 {
+    if (process_instruction(instruction, M))
+    {
+        // Handled
+        return;
+    }
+
+    // switch (instruction)
+    // {
+    // default:
+    fail_fast("Invalid instruction");
+    //     break;
+    // }
+}
+
+void CPU6502::set_resolved_byte(uint8_t addr, AddressingMode addressing_mode, uint8_t value)
+{
+    switch (addressing_mode)
+    {
+    case AddressingMode::ZeroPage:
+        _memory.set_byte_at(addr, value);
+        break;
+    case AddressingMode::ZeroPageX:
+        // Note: Address wrap around
+        _memory.set_byte_at((addr + _registers.x()) & 0xff, value);
+        break;
+    case AddressingMode::ZeroPageY:
+        __debugbreak(); // TODO: unused?
+        _memory.set_byte_at(addr + _registers.y(), value);
+        break;
+    case AddressingMode::IndirectX:
+    {
+        __debugbreak(); // TODO: unused?
+        // Note: Address wrap around
+        const uint16_t new_addr{_memory.get_word_at((addr + _registers.x()) & 0xFF)};
+        _memory.set_byte_at(new_addr, value);
+    }
+    break;
+    case AddressingMode::IndirectY:
+    {
+        // No Zero Page wrap around
+        const uint16_t resolved_addr = _memory.get_word_at(addr) + _registers.y();
+
+        // Value will loaded with the contents of memory at $4038.
+        _memory.set_byte_at(resolved_addr, value);
+    }
+    break;
+    default:
+        fail_fast("Invalid addressing mode");
+        break;
+    }
+}
+// returns true if handled.
+bool CPU6502::process_instruction(Instruction instruction, uint8_t M)
+{
+    bool handled = true;
+
     switch (instruction)
     {
+    case Instruction::AND:
+        // A,Z,N = A&M
+        _registers.set_a(_registers.a() & M);
+        _registers.set_psr_Z_if_zero(_registers.a());
+        _registers.set_psr_N_if_negative(_registers.a());
+        break;
     case Instruction::ADC:
         // A,Z,C,N = A+M+C
 
@@ -785,10 +847,11 @@ void CPU6502::process_addressing_mode_immediate(Instruction instruction, uint8_t
             _registers.set_psr_V(set_v);
         }
         break;
-    case Instruction::AND:
-        _registers.set_a(_registers.a() & M);
-        _registers.set_psr_Z_if_zero(_registers.a());
-        _registers.set_psr_N_if_negative(_registers.a());
+    case Instruction::BIT:
+        // A & M, N = M7, V = M6
+        _registers.set_psr_Z((_registers.a() & M) == 0);
+        _registers.set_psr_V(IS_BIT_SET(M, 6));
+        _registers.set_psr_N_if_negative(M);
         break;
     case Instruction::CMP:
         // Z,C,N = A-M
@@ -863,48 +926,13 @@ void CPU6502::process_addressing_mode_immediate(Instruction instruction, uint8_t
             _registers.set_psr_N_if_negative(_registers.a());
         }
         break;
-    default:
-        fail_fast("Invalid instruction");
-        break;
-    }
-}
 
-void CPU6502::set_resolved_byte(uint8_t addr, AddressingMode addressing_mode, uint8_t value)
-{
-    switch (addressing_mode)
-    {
-    case AddressingMode::ZeroPage:
-        _memory.set_byte_at(addr, value);
-        break;
-    case AddressingMode::ZeroPageX:
-        // Note: Address wrap around
-        _memory.set_byte_at((addr + _registers.x()) & 0xff, value);
-        break;
-    case AddressingMode::ZeroPageY:
-        __debugbreak(); // TODO: unused?
-        _memory.set_byte_at(addr + _registers.y(), value);
-        break;
-    case AddressingMode::IndirectX:
-    {
-        __debugbreak(); // TODO: unused?
-        // Note: Address wrap around
-        const uint16_t new_addr{_memory.get_word_at((addr + _registers.x()) & 0xFF)};
-        _memory.set_byte_at(new_addr, value);
-    }
-    break;
-    case AddressingMode::IndirectY:
-    {
-        // No Zero Page wrap around
-        const uint16_t resolved_addr = _memory.get_word_at(addr) + _registers.y();
-
-        // Value will loaded with the contents of memory at $4038.
-        _memory.set_byte_at(resolved_addr, value);
-    }
-    break;
     default:
-        fail_fast("Invalid addressing mode");
+        handled = false;
         break;
     }
+
+    return handled;
 }
 
 // Operand is an address anywhere in 64K memory. LDA 3056 loads contents of address 3056 into A.
@@ -913,39 +941,14 @@ void CPU6502::process_addressing_mode_absolute(Instruction instruction, uint16_t
     // NOTE: Not needed for JMP,JSR,STA,STX,STY
     uint8_t M = _memory.get_byte_at(addr);
 
+    if (process_instruction(instruction, M))
+    {
+        // Handled
+        return;
+    }
+
     switch (instruction)
     {
-    case Instruction::AND:
-        // A,Z,N = A&M
-        _registers.set_a(_registers.a() & M);
-        _registers.set_psr_Z_if_zero(_registers.a());
-        _registers.set_psr_N_if_negative(_registers.a());
-        break;
-    case Instruction::ASL:
-        // M,Z,C,N = M*2
-
-        // Set to contents of old bit 7.
-        _registers.set_psr_C(IS_BIT_SET(M, 7));
-
-        M <<= 1;
-
-        _registers.set_psr_Z_if_zero(M);
-        _registers.set_psr_N_if_negative(M);
-
-        _memory.set_byte_at(addr, M);
-        break;
-    case Instruction::BIT:
-        // A & M, N = M7, V = M6
-        _registers.set_psr_Z((_registers.a() & M) == 0);
-        _registers.set_psr_V(IS_BIT_SET(M, 6));
-        _registers.set_psr_N_if_negative(M);
-        break;
-    case Instruction::CMP:
-        // Z,C,N = A-M
-        _registers.set_psr_C(_registers.a() >= M);
-        _registers.set_psr_Z(_registers.a() == M);
-        _registers.set_psr_N_if_negative(_registers.a() - M);
-        break;
     case Instruction::DEC:
         // M,Z,N = M-1
         M -= -1;
@@ -977,23 +980,18 @@ void CPU6502::process_addressing_mode_absolute(Instruction instruction, uint16_t
         push_stack_word(_registers.pc() - 1);
         _registers.set_pc(addr);
         break;
-    case Instruction::LDA:
-        // A,Z,N = M
-        _registers.set_a(M);
-        _registers.set_psr_Z_if_zero(_registers.a());
-        _registers.set_psr_N_if_negative(_registers.a());
-        break;
-    case Instruction::LDX:
-        // X,Z,N = M
-        _registers.set_x(M);
-        _registers.set_psr_Z_if_zero(_registers.x());
-        _registers.set_psr_N_if_negative(_registers.x());
-        break;
-    case Instruction::LDY:
-        // Y,Z,N = M
-        _registers.set_y(M);
-        _registers.set_psr_Z_if_zero(_registers.y());
-        _registers.set_psr_N_if_negative(_registers.y());
+    case Instruction::ASL:
+        // M,Z,C,N = M*2
+
+        // Set to contents of old bit 7.
+        _registers.set_psr_C(IS_BIT_SET(M, 7));
+
+        M <<= 1;
+
+        _registers.set_psr_Z_if_zero(M);
+        _registers.set_psr_N_if_negative(M);
+
+        _memory.set_byte_at(addr, M);
         break;
     case Instruction::LSR:
         // M,C,Z,N = M/2
@@ -1007,12 +1005,6 @@ void CPU6502::process_addressing_mode_absolute(Instruction instruction, uint16_t
 
         _memory.set_byte_at(addr, M);
         break;
-    case Instruction::ORA:
-        // A,Z,N = A|M
-        _registers.set_a(_registers.a() | M);
-        _registers.set_psr_Z_if_zero(_registers.a());
-        _registers.set_psr_N_if_negative(_registers.a());
-        break;
     case Instruction::ROR:
     {
         const uint8_t previous_C = _registers.psr_C() << 7;
@@ -1020,10 +1012,12 @@ void CPU6502::process_addressing_mode_absolute(Instruction instruction, uint16_t
         // Set to contents of old bit 0
         _registers.set_psr_C(IS_BIT_SET(M, 0));
 
-        _registers.set_a((M >> 1) | previous_C);
+        M = (M >> 1) | previous_C;
 
-        _registers.set_psr_Z_if_zero(_registers.a());
-        _registers.set_psr_N_if_negative(_registers.a());
+        _registers.set_psr_Z_if_zero(M);
+        _registers.set_psr_N_if_negative(M);
+
+        _memory.set_byte_at(addr, M);
     }
     break;
     case Instruction::STA:
@@ -1103,47 +1097,14 @@ void CPU6502::process_addressing_mode_byte(uint8_t operand_value, Instruction in
     // Use set_resolved_byte(operand_value, addressing_mode, v) to write.
     uint8_t M{get_resolved_byte(operand_value, addressing_mode)};
 
+    if (process_instruction(instruction, M))
+    {
+        // Handled
+        return;
+    }
+
     switch (instruction)
     {
-    case Instruction::AND:
-        // A,Z,N = A&M
-        _registers.set_a(_registers.a() & M);
-        _registers.set_psr_Z_if_zero(_registers.a());
-        _registers.set_psr_N_if_negative(_registers.a());
-        break;
-    case Instruction::ADC:
-        // A,Z,C,N = A+M+C
-
-        // NOTE: Normally decimal mode is disabled and ADC/SBC perform
-        // simple binary arithmetic (e.g. $99 + $01 => $9A Carry = 0),
-        // but if the flag is set with a SED instruction the processor will perform
-        // binary coded decimal arithmetic instead (e.g. $99 + $01 => $00 Carry = 1).
-
-        if (_registers.psr_D())
-        {
-            fail_fast("Decimal mode not implemented");
-        }
-        else
-        {
-            const uint16_t sum = _registers.a() + M + _registers.psr_C();
-
-            _registers.set_psr_C(HIBYTE(sum) != 0);
-
-            const uint8_t sum8 = LOBYTE(sum);
-
-            _registers.set_a(sum8);
-
-            _registers.set_psr_N_if_negative(_registers.a());
-            _registers.set_psr_Z_if_zero(_registers.a());
-
-            // The V bit is set to represent overflow if the
-            // result exceeds +127 or -128 in two’s complement binary.
-            const bool set_v =
-                !IS_BIT_SET(_registers.a() ^ M, 7) &&
-                IS_BIT_SET(_registers.a() ^ sum8, 7);
-            _registers.set_psr_V(set_v);
-        }
-        break;
     case Instruction::ASL:
         // M,Z,C,N = M*2
 
@@ -1157,61 +1118,27 @@ void CPU6502::process_addressing_mode_byte(uint8_t operand_value, Instruction in
 
         set_resolved_byte(operand_value, addressing_mode, M);
         break;
-    case Instruction::BIT:
-        // A & M, N = M7, V = M6
-        _registers.set_psr_Z_if_zero(_registers.a() & M);
-        _registers.set_psr_V(IS_BIT_SET(M, 6));
-        _registers.set_psr_N_if_negative(M);
-        break;
-    case Instruction::CMP:
-        // Z,C,N = A-M
-        _registers.set_psr_C(_registers.a() >= M);
-        _registers.set_psr_Z(_registers.a() == M);
-        _registers.set_psr_N_if_negative(_registers.a() - M);
-        break;
+
     case Instruction::DEC:
         // M,Z,N = M-1
         M -= 1;
+
         _registers.set_psr_Z_if_zero(M);
         _registers.set_psr_N_if_negative(M);
 
         set_resolved_byte(operand_value, addressing_mode, M);
-        break;
-    case Instruction::EOR:
-        // A,Z,N = A^M
-        _registers.set_a(_registers.a() ^ M);
-        _registers.set_psr_Z_if_zero(_registers.a());
-        _registers.set_psr_N_if_negative(_registers.a());
         break;
     case Instruction::INC:
         // M,Z,N = M+1
         M += 1;
+
         _registers.set_psr_Z_if_zero(M);
         _registers.set_psr_N_if_negative(M);
 
         set_resolved_byte(operand_value, addressing_mode, M);
         break;
-    case Instruction::LDA:
-        // A,Z,N = M
-        _registers.set_a(M);
-        _registers.set_psr_Z_if_zero(_registers.a());
-        _registers.set_psr_N_if_negative(_registers.a());
-        break;
-    case Instruction::LDX:
-        // X,Z,N = M
-        _registers.set_x(M);
-        _registers.set_psr_Z_if_zero(_registers.x());
-        _registers.set_psr_N_if_negative(_registers.x());
-        break;
-    case Instruction::LDY:
-        // Y,Z,N = M
-        _registers.set_y(M);
-        _registers.set_psr_Z_if_zero(_registers.y());
-        _registers.set_psr_N_if_negative(_registers.y());
-        break;
     case Instruction::LSR:
         // M,C,Z,N = M/2
-
         // Set to contents of old bit 0
         _registers.set_psr_C(IS_BIT_SET(M, 0));
 
@@ -1222,12 +1149,6 @@ void CPU6502::process_addressing_mode_byte(uint8_t operand_value, Instruction in
 
         set_resolved_byte(operand_value, addressing_mode, M);
         break;
-    case Instruction::ORA:
-        // A,Z,N = A|M
-        _registers.set_a(_registers.a() | M);
-        _registers.set_psr_Z_if_zero(_registers.a());
-        _registers.set_psr_N_if_negative(_registers.a());
-        break;
     case Instruction::ROL:
     {
         const bool previous_C = _registers.psr_C();
@@ -1235,10 +1156,12 @@ void CPU6502::process_addressing_mode_byte(uint8_t operand_value, Instruction in
         // Set to contents of old bit 7
         _registers.set_psr_C(IS_BIT_SET(M, 7));
 
-        _registers.set_a((M << 1) | static_cast<uint8_t>(previous_C));
+        M = (M << 1) | static_cast<uint8_t>(previous_C);
 
-        _registers.set_psr_Z_if_zero(_registers.a());
-        _registers.set_psr_N_if_negative(_registers.a());
+        _registers.set_psr_Z_if_zero(M);
+        _registers.set_psr_N_if_negative(M);
+
+        set_resolved_byte(operand_value, addressing_mode, M);
     }
     break;
     case Instruction::ROR:
@@ -1248,41 +1171,14 @@ void CPU6502::process_addressing_mode_byte(uint8_t operand_value, Instruction in
         // Set to contents of old bit 0
         _registers.set_psr_C(IS_BIT_SET(M, 0));
 
-        _registers.set_a((M >> 1) | previous_C);
+        M = (M >> 1) | previous_C;
 
-        _registers.set_psr_Z_if_zero(_registers.a());
-        _registers.set_psr_N_if_negative(_registers.a());
+        _registers.set_psr_Z_if_zero(M);
+        _registers.set_psr_N_if_negative(M);
+
+        set_resolved_byte(operand_value, addressing_mode, M);
     }
     break;
-    case Instruction::SBC:
-        // A,Z,C,N = A-M-(1-C)
-
-        // NOTE: Normally decimal mode is disabled and ADC/SBC perform
-        // simple binary arithmetic (e.g. $99 + $01 => $9A Carry = 0),
-        // but if the flag is set with a SED instruction the processor will perform
-        // binary coded decimal arithmetic instead (e.g. $99 + $01 => $00 Carry = 1).
-
-        if (_registers.psr_D())
-        {
-            fail_fast("Decimal mode not implemented");
-        }
-        else
-        {
-            // NOTE: signed int
-            const int16_t diff = _registers.a() - M - (1 - _registers.psr_C());
-            const uint8_t diff8 = LOBYTE(diff);
-
-            // The V bit is set automatically to represent overflow if the
-            // result exceeds (+127) or (-128) in two’s complement binary.
-            _registers.set_psr_V(diff > 127 || diff < -128);
-            _registers.set_psr_C(diff >= 0);
-
-            _registers.set_a(diff8);
-
-            _registers.set_psr_Z_if_zero(_registers.a());
-            _registers.set_psr_N_if_negative(_registers.a());
-        }
-        break;
     case Instruction::STA:
         // M = A
         set_resolved_byte(operand_value, addressing_mode, _registers.a());
@@ -1340,88 +1236,14 @@ void CPU6502::process_addressing_mode_word(uint16_t operand_value, Instruction i
     // NOTE: Not needed for STA,STX,STY
     const uint8_t M = _memory.get_byte_at(addr);
 
+    if (process_instruction(instruction, M))
+    {
+        // Handled
+        return;
+    }
+
     switch (instruction)
     {
-    case Instruction::ADC:
-        // A,Z,C,N = A+M+C
-
-        // NOTE: Normally decimal mode is disabled and ADC/SBC perform
-        // simple binary arithmetic (e.g. $99 + $01 => $9A Carry = 0),
-        // but if the flag is set with a SED instruction the processor will perform
-        // binary coded decimal arithmetic instead (e.g. $99 + $01 => $00 Carry = 1).
-
-        if (_registers.psr_D())
-        {
-            fail_fast("Decimal mode not implemented");
-        }
-        else
-        {
-            const uint16_t sum = _registers.a() + M + _registers.psr_C();
-
-            _registers.set_psr_C(HIBYTE(sum) != 0);
-
-            const uint8_t sum8 = LOBYTE(sum);
-
-            _registers.set_a(sum8);
-
-            _registers.set_psr_N_if_negative(_registers.a());
-            _registers.set_psr_Z_if_zero(_registers.a());
-
-            // The V bit is set to represent overflow if the
-            // result exceeds +127 or -128 in two’s complement binary.
-            const bool set_v =
-                !IS_BIT_SET(_registers.a() ^ M, 7) &&
-                IS_BIT_SET(_registers.a() ^ sum8, 7);
-            _registers.set_psr_V(set_v);
-        }
-        break;
-    case Instruction::EOR:
-        // A,Z,N = A^M
-        _registers.set_a(_registers.a() ^ M);
-        _registers.set_psr_Z_if_zero(_registers.a());
-        _registers.set_psr_N_if_negative(_registers.a());
-        break;
-    case Instruction::LDA:
-        // A,Z,N = M
-        _registers.set_a(M);
-        _registers.set_psr_Z_if_zero(_registers.a());
-        _registers.set_psr_N_if_negative(_registers.a());
-        break;
-    case Instruction::LDX:
-        // X,Z,N = M
-        _registers.set_x(M);
-        _registers.set_psr_Z_if_zero(_registers.x());
-        _registers.set_psr_N_if_negative(_registers.x());
-        break;
-    case Instruction::SBC:
-        // A,Z,C,N = A-M-(1-C)
-        // NOTE: Normally decimal mode is disabled and ADC/SBC perform
-        // simple binary arithmetic (e.g. $99 + $01 => $9A Carry = 0),
-        // but if the flag is set with a SED instruction the processor will perform
-        // binary coded decimal arithmetic instead (e.g. $99 + $01 => $00 Carry = 1).
-
-        if (_registers.psr_D())
-        {
-            fail_fast("Decimal mode not implemented");
-        }
-        else
-        {
-            // NOTE: signed int
-            const int16_t diff = _registers.a() - M - (1 - _registers.psr_C());
-            const uint8_t diff8 = LOBYTE(diff);
-
-            // The V bit is set automatically to represent overflow if the
-            // result exceeds (+127) or (-128) in two’s complement binary.
-            _registers.set_psr_V(diff > 127 || diff < -128);
-            _registers.set_psr_C(diff >= 0);
-
-            _registers.set_a(diff8);
-
-            _registers.set_psr_Z_if_zero(_registers.a());
-            _registers.set_psr_N_if_negative(_registers.a());
-        }
-        break;
-
     case Instruction::STA:
         _memory.set_byte_at(addr, _registers.a());
         break;

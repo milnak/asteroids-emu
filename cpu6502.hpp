@@ -148,6 +148,8 @@ private:
 
     uint16_t resolve_address(uint16_t value, AddressingMode addressing_mode);
 
+    bool process_instruction(Instruction instruction, uint8_t M);
+
     void process_addressing_mode_accumulator(Instruction instruction);
     void process_addressing_mode_implied(Instruction instruction);
     bool process_addressing_mode_relative(Instruction instruction);
