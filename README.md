@@ -4,7 +4,7 @@ SDL2 based asteroids emulator
 
 ## Build Environment Prep
 
-Install vs build tools:
+**Install Visual Studio build tools:**
 
 ```PowerShell
 Invoke-WebRequest -Uri 'https://aka.ms/vs/17/release/vs_BuildTools.exe' -OutFile "$env:TEMP\vs_BuildTools.exe"
@@ -12,19 +12,19 @@ Invoke-WebRequest -Uri 'https://aka.ms/vs/17/release/vs_BuildTools.exe' -OutFile
 & "$env:TEMP\vs_BuildTools.exe" --passive --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --remove Microsoft.VisualStudio.Component.VC.CMake.Project
 ```
 
-Install cmake:
+**Install cmake:**
 
 ```PowerShell
 scoop install cmake
 ```
 
-Install sdl2:
+**Install sdl2:**
 
 ```PowerShell
 scoop install sdl2
 ```
 
-Add [FindSDL2.cmake](https://github.com/aminosbh/sdl2-cmake-modules)
+**Add [FindSDL2.cmake](https://github.com/aminosbh/sdl2-cmake-modules)**
 
 ```PowerShell
 cd asteroids-emu
@@ -35,14 +35,17 @@ git commit -m "Add SDL2 CMake modules"
 ## Generate Build Files
 
 ```PowerShell
-cmake.exe -S . -B build  -Wno-dev
+cmake.exe -S . -B build
 ```
 
 ## Build
 
 ```PowerShell
 cmake.exe --build build --config Debug --parallel
+
 ```
+
+_Optional: `--clean-first` and/or `--config RelWithDebInfo`_
 
 ## Run
 
@@ -66,7 +69,6 @@ Filename|Size|Region|Offset
 035144-04e.h2|2048|maincpu|7000
 035143-02.j2|2048|maincpu|7800
 035127-02.np3|2048|maincpu|5000
-
 034602-01.c8|256|dvg:prom|0
 
 ## References
@@ -97,4 +99,3 @@ SDL:
 
 * [SDL Wiki - API Reference](https://wiki.libsdl.org/SDL2/CategoryAPI)
 * [Drawing Lines with SDL2](https://gigi.nullneuron.net/gigilabs/drawing-lines-with-sdl2)
-

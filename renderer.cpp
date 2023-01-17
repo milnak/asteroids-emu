@@ -33,7 +33,7 @@ bool Renderer::create_window()
                      FALSE);
 
     // SDL_WINDOW_MAXIMIZED
-    _window = SDL_CreateWindow("AsteroidsEmu by JeffMill",
+    _window = SDL_CreateWindow("AsteroidsEmu by JeffMill (Build: " __DATE__ ")",
                                SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                                rc.right, rc.bottom,
                                0);
