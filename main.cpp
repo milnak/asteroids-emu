@@ -203,6 +203,15 @@ int main(int argc, char **argv)
     DVG dvg(renderer, debug_flags & DEBUG_FLAG_DVG);
     CPU6502 cpu(memory, debug_flags & DEBUG_FLAG_CPU, breakpoints);
 
+    //
+    // Set DIP switches
+    //
+
+    // $2800: coinage: 0=free play, 1=1 coin 2 credits, 2=1/1, 3=2/1
+    memory.set_byte_at(MMIO::DSW1::SWCOINAGE, 3);
+    // 2803 SWLANGUAGE Language 0 = English, 1 = German, 2 = French, 3 = Spanish)
+    memory.set_byte_at(MMIO::DSW1::SWLANGUAGE, 0);
+
     while (running)
     {
 #if 0

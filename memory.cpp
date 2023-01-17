@@ -38,23 +38,6 @@ uint8_t Memory::get_byte_at(uint16_t addr) const
     else if (addr >= 0x2000 && addr <= 0x3FFF)
     {
         byte = _mapped_io.at(addr - 0x2000);
-
-        // TODO: Selftest doesnt appear to be working? (stack underflow)
-        if (addr == MMIO::IN0::SWTEST)
-        {
-            // byte = 0xff;
-        }
-        // $2800: coinage: 0=free play, 1=1 coin 2 credits, 2=1/1, 3=2/1
-        else if (addr == MMIO::DSW1::SWCOINAGE)
-        {
-            // TODO: Turn off free play
-            byte = 3;
-        }
-        // else if (addr = MMIO::DSW1::SWLANGUAGE)
-        // {
-               // 2803 SWLANGUAGE Language 0 = English, 1 = German, 2 = French, 3 = Spanish)
-        //     byte = 0;
-        // }
     }
 
     // 4000:47FF Vector RAM
