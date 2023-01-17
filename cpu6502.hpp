@@ -161,6 +161,11 @@ private:
     Memory &_memory;
 
     bool _debug_mode = false;
+
+    // When breakpoints are set, then this becomes true only after breakpoint is hit.
+    // Otherwise, it's set to true.
+    bool _debug_mode_enabled = false;
+
     std::vector<uint16_t> _breakpoints;
 
     Registers _registers;

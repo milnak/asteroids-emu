@@ -137,6 +137,7 @@ static void run_until_tick(CPU6502 &cpu, Memory &memory, DVG &dvg, bool debug_mo
         (byte & 0x02 ? '1' : '0'), \
         (byte & 0x01 ? '1' : '0')
 
+// e.g. -b 0x7b7b -t 1
 int main(int argc, char **argv)
 {
     bool running = true;

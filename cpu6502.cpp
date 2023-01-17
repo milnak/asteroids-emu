@@ -339,6 +339,11 @@ const std::array<OpcodeInfo, 256> OpcodeInfoTable{
 CPU6502::CPU6502(Memory &memory, bool debug, const std::vector<uint16_t> &breakpoints)
     : _memory(memory), _debug_mode{debug}, _breakpoints(breakpoints)
 {
+    if (_debug_mode && _breakpoints.empty())
+    {
+        _debug_mode_enabled = true;
+    }
+
     reset();
 }
 
@@ -424,11 +429,6 @@ void CPU6502::reset()
 
 void CPU6502::execute_instruction()
 {
-    if (_debug_mode)
-    {
-        std::cout << _registers << "  " << *this << std::endl;
-    }
-
     // Get info about this opcode.
 
     const uint8_t opcode = _memory.get_byte_at(_registers.pc());
@@ -444,10 +444,21 @@ void CPU6502::execute_instruction()
     // Check if breakpoint hit.
     if (std::find(_breakpoints.begin(), _breakpoints.end(), _registers.pc()) != _breakpoints.end())
     {
+        if (_debug_mode && !_debug_mode_enabled)
+        {
+            // Set debug_mode_enabled once we've hit our breakpoint
+            _debug_mode_enabled = true;
+        }
+
         fail_fast("Breakpoint hit");
     }
 
-    if (_debug_mode)
+    if (_debug_mode_enabled)
+    {
+        std::cout << _registers << "  " << *this << std::endl;
+    }
+
+    if (_debug_mode_enabled)
     {
         if (_registers.pc() == _memory.get_NMI_handler_address())
         {
@@ -590,7 +601,7 @@ void CPU6502::process_addressing_mode_implied(Instruction instruction)
         _registers.set_p(pop_stack_byte());
         _registers.set_pc(pop_stack_word());
 
-        if (_debug_mode)
+        if (_debug_mode_enabled)
         {
             std::cout << "[RTI] "
                       << "PC: " << std::hex << std::nouppercase << std::setfill('0') << std::setw(4) << static_cast<int>(_registers.pc())
@@ -684,8 +695,6 @@ void CPU6502::process_addressing_mode_accumulator(Instruction instruction)
 
         _registers.set_psr_Z_if_zero(_registers.a());
         _registers.set_psr_N_if_negative(_registers.a());
-
-        _registers.set_a(M);
     }
     break;
     case Instruction::ROR:
@@ -876,8 +885,6 @@ bool CPU6502::process_instruction(Instruction instruction, uint8_t M)
         _registers.set_a(M);
         _registers.set_psr_Z_if_zero(_registers.a());
         _registers.set_psr_N_if_negative(_registers.a());
-
-        _registers.set_a(M);
         break;
     case Instruction::LDX:
         _registers.set_x(M);
@@ -1253,7 +1260,7 @@ void CPU6502::process_addressing_mode_word(uint16_t operand_value, Instruction i
 
 void CPU6502::initiate_nmi()
 {
-    if (_debug_mode)
+    if (_debug_mode_enabled)
     {
         std::cout
             << "[NMI] "

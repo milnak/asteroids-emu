@@ -49,7 +49,6 @@ int16_t calculate_delta(uint16_t val, int16_t shift_amount, bool negate)
     return result;
 }
 
-
 void DVG::reset()
 {
     _pc = 0;
@@ -267,8 +266,12 @@ void DVG::process_instruction(Memory &memory)
                 << ";JSRL a=$" << std::hex << std::setfill('0') << std::setw(4) << word0 << std::endl;
         }
 
-        // C++ exception thrown on stack overflow.
-        _stack.at(_sp) = _pc;
+        if (_sp == _stack.size() - 1)
+        {
+            fail_fast("DVG Stack overflow!");
+        }
+
+        _stack[_sp] = _pc;
 
         ++_sp;
 
@@ -284,10 +287,14 @@ void DVG::process_instruction(Memory &memory)
             std::cout << ";RTSL" << std::endl;
         }
 
+        if (_sp == 0)
+        {
+            fail_fast("DVG Stack underflow!");
+        }
+
         --_sp;
 
-        // C++ exception thrown on stack underflow.
-        _pc = _stack.at(_sp);
+        _pc = _stack[_sp];
     }
     else if (instruction == 0x0E)
     {
