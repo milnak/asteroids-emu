@@ -207,9 +207,13 @@ int main(int argc, char **argv)
     // Set DIP switches
     //
 
-    // $2800: coinage: 0=free play, 1=1 coin 2 credits, 2=1/1, 3=2/1
-    memory.set_byte_at(MMIO::DSW1::SWCOINAGE, 3);
-    // 2803 SWLANGUAGE Language 0 = English, 1 = German, 2 = French, 3 = Spanish)
+    // 2800 SWCOINAGE Coinage 0 = Free Play, 1 = 1 Coin 2 Credits, 2 = 1 Coin 1 Credit, 3 = 2 Coins 1 Credit
+    memory.set_byte_at(MMIO::DSW1::SWCOINAGE, 2);
+    // 2801 SWCNRMULT Right Coin Multiplier 0 = 1x, 1 = 4x, 2 = 5x, 3 = 6x
+    memory.set_byte_at(MMIO::DSW1::SWCNRMULT, 0);
+    // 2802 SWCNCMULT Center Coin Multiplier & Starting Lives 0 = 1x & 4, 1 = 1x & 3, 2 = 2x & 4, 3 = 2x & 3
+    memory.set_byte_at(MMIO::DSW1::SWCNCMULT, 3);
+    // 2803 SWLANGUAGE Language 0 = English, 1 = German, 2 = French, 3 = Spanish
     memory.set_byte_at(MMIO::DSW1::SWLANGUAGE, 0);
 
     while (running)

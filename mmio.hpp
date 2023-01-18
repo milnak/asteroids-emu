@@ -94,13 +94,11 @@ public:
         SWCOINAGE = 0x2800,
         // 2801 SWCNRMULT Right Coin Multiplier 0 = 1x, 1 = 4x, 2 = 5x, 3 = 6x
         SWCNRMULT = 0x2801,
-        // 2802 SWCNCMULT Center Coin Multiplier & Starting Lives 1x & 4, 1 = 1x & 3, 2 = 2x & 4, 3 = 2x & 3
+        // 2802 SWCNCMULT Center Coin Multiplier & Starting Lives 0 = 1x & 4, 1 = 1x & 3, 2 = 2x & 4, 3 = 2x & 3
         SWCNCMULT = 0x2802,
         // 2803 SWLANGUAGE Language 0 = English, 1 = German, 2 = French, 3 = Spanish
         SWLANGUAGE = 0x2803,
     };
-
-    // TODO: DSW1 (DIP switches)
 
     //
     // OTHER
