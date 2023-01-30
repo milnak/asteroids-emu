@@ -221,8 +221,8 @@ int main(int argc, char **argv)
     // 2803 SWLANGUAGE Language 0 = English, 1 = German, 2 = French, 3 = Spanish
     memory.set_byte_at(MMIO::DSW1::SWLANGUAGE, 0);
 
-    // // 2007 SWTEST - Self Test Switch
-    memory.mmio.set_IN0_SWTEST(self_test);
+    // 2007 SWTEST - Self Test Switch
+    memory.set_byte_at(MMIO::IN0::SWTEST, self_test);
 
     while (running)
     {
