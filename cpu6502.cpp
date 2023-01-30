@@ -912,22 +912,6 @@ bool CPU6502::process_instruction(Instruction instruction, uint8_t M)
         _registers.set_psr_Z_if_zero(_registers.a());
         _registers.set_psr_N_if_negative(_registers.a());
         break;
-    case Instruction::ROL:
-    {
-        const bool previous_C = _registers.psr_C();
-
-        // Set to contents of old bit 7
-        _registers.set_psr_C(IS_BIT_SET(M, 7));
-
-        M = (M << 1) | static_cast<uint8_t>(previous_C);
-
-        _registers.set_psr_Z_if_zero(M);
-        _registers.set_psr_N_if_negative(M);
-
-        _registers.set_a(M);
-    }
-    break;
-
     case Instruction::SBC:
         // A,Z,C,N = A-M-(1-C)
         // NOTE: Normally decimal mode is disabled and ADC/SBC perform
