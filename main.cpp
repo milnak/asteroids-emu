@@ -54,7 +54,7 @@ void clock_gettime(struct timespec *spec)
 #endif
 
 // Processes instructions until next tick is reached.
-static void run_until_tick(CPU6502 &cpu, Memory &memory, DVG &dvg, bool debug_mode)
+static void run_until_tick(CPU6502 &cpu, Memory &memory, DVG &dvg, bool self_test, bool debug_mode)
 {
     // CPU execution loop
 
@@ -78,8 +78,8 @@ static void run_until_tick(CPU6502 &cpu, Memory &memory, DVG &dvg, bool debug_mo
             cpu.execute_instruction();
 
             // If enough cycles have passed, initiate NMI.
-
-            if (cpu.get_cycle() >= next_nmi)
+            // NMI should *not* run if self-test switch was set.
+            if (!self_test && cpu.get_cycle() >= next_nmi)
             {
                 cpu.initiate_nmi();
 
@@ -143,6 +143,7 @@ int main(int argc, char **argv)
     bool running = true;
     uint8_t debug_flags = 0;
     std::vector<uint16_t> breakpoints;
+    bool self_test = false;
 
     int trace_bits = 0;
 
@@ -151,11 +152,12 @@ int main(int argc, char **argv)
         static struct option long_options[] =
             {
                 {"breakpoint", required_argument, 0, 'b'},
+                {"self-test", no_argument, 0, 's'},
                 {"trace", required_argument, 0, 't'},
                 {0, 0, 0, 0}};
 
         int option_index = 0;
-        const int c = getopt_long(argc, argv, "b:t:", long_options, &option_index);
+        const int c = getopt_long(argc, argv, "b:st:", long_options, &option_index);
         if (c == -1)
         {
             break;
@@ -170,6 +172,9 @@ int main(int argc, char **argv)
             v = static_cast<uint16_t>(std::stoul(optarg, nullptr, 16));
             printf("Added breakpoint at $%X\n", v);
             breakpoints.push_back(v);
+            break;
+        case 's':
+            self_test = true;
             break;
         case 't':
             // --trace 111
@@ -216,6 +221,9 @@ int main(int argc, char **argv)
     // 2803 SWLANGUAGE Language 0 = English, 1 = German, 2 = French, 3 = Spanish
     memory.set_byte_at(MMIO::DSW1::SWLANGUAGE, 0);
 
+    // // 2007 SWTEST - Self Test Switch
+    memory.mmio.set_IN0_SWTEST(self_test);
+
     while (running)
     {
 #if 0
@@ -236,7 +244,7 @@ int main(int argc, char **argv)
             break;
         }
 
-        run_until_tick(cpu, memory, dvg, debug_flags & DEBUG_FLAG_MISC);
+        run_until_tick(cpu, memory, dvg, self_test, debug_flags & DEBUG_FLAG_MISC);
 
 #if 0
         delta = now.elapsed();

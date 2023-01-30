@@ -356,6 +356,7 @@ std::ostream &operator<<(std::ostream &os, const CPU6502 &cpu)
     const OpcodeInfo &opcode_info = OpcodeInfoTable.at(opcode);
     if (opcode_info.instruction == Instruction::Invalid)
     {
+        std::cout << cpu._registers << "  " << cpu << std::endl;
         fail_fast("Invalid opcode");
     }
 
@@ -409,6 +410,7 @@ std::ostream &operator<<(std::ostream &os, const CPU6502 &cpu)
     }
     else
     {
+        std::cout << cpu._registers << "  " << cpu << std::endl;
         fail_fast("Invalid number of opcode bytes");
     }
 
@@ -424,7 +426,7 @@ void CPU6502::reset()
     // Set PC to address of power on reset location
     _registers.set_pc(_memory.get_power_on_reset_address());
 
-    _cycle = 6;
+    _cycle = 0;
 }
 
 void CPU6502::execute_instruction()
@@ -436,6 +438,7 @@ void CPU6502::execute_instruction()
     const OpcodeInfo &opcode_info = OpcodeInfoTable.at(opcode);
     if (opcode_info.instruction == Instruction::Invalid)
     {
+        std::cout << _registers << "  " << *this << std::endl;
         fail_fast("Invalid opcode");
     }
 
@@ -450,6 +453,7 @@ void CPU6502::execute_instruction()
             _debug_mode_enabled = true;
         }
 
+        std::cout << _registers << "  " << *this << std::endl;
         fail_fast("Breakpoint hit");
     }
 
@@ -534,6 +538,7 @@ void CPU6502::execute_instruction()
     break;
 
     default:
+        std::cout << _registers << "  " << *this << std::endl;
         fail_fast("Invalid opcode");
         break;
     }
@@ -650,6 +655,7 @@ void CPU6502::process_addressing_mode_implied(Instruction instruction)
         _registers.set_psr_N_if_negative(_registers.a());
         break;
     default:
+        std::cout << _registers << "  " << *this << std::endl;
         fail_fast("Invalid instruction");
         break;
     }
@@ -711,6 +717,7 @@ void CPU6502::process_addressing_mode_accumulator(Instruction instruction)
     }
     break;
     default:
+        std::cout << _registers << "  " << *this << std::endl;
         fail_fast("Invalid instruction");
         break;
     }
@@ -748,6 +755,7 @@ bool CPU6502::process_addressing_mode_relative(Instruction instruction)
         do_branch = _registers.psr_V();
         break;
     default:
+        std::cout << _registers << "  " << *this << std::endl;
         fail_fast("Invalid instruction");
         break;
     }
@@ -764,6 +772,7 @@ void CPU6502::process_addressing_mode_immediate(Instruction instruction, uint8_t
         return;
     }
 
+    std::cout << _registers << "  " << *this << std::endl;
     fail_fast("Invalid instruction");
 }
 
@@ -800,6 +809,7 @@ void CPU6502::set_resolved_byte(uint8_t addr, AddressingMode addressing_mode, ui
     }
     break;
     default:
+        std::cout << _registers << "  " << *this << std::endl;
         fail_fast("Invalid addressing mode");
         break;
     }
@@ -828,6 +838,7 @@ bool CPU6502::process_instruction(Instruction instruction, uint8_t M)
 
         if (_registers.psr_D())
         {
+            std::cout << _registers << "  " << *this << std::endl;
             fail_fast("Decimal mode not implemented");
         }
         else
@@ -901,6 +912,22 @@ bool CPU6502::process_instruction(Instruction instruction, uint8_t M)
         _registers.set_psr_Z_if_zero(_registers.a());
         _registers.set_psr_N_if_negative(_registers.a());
         break;
+    case Instruction::ROL:
+    {
+        const bool previous_C = _registers.psr_C();
+
+        // Set to contents of old bit 7
+        _registers.set_psr_C(IS_BIT_SET(M, 7));
+
+        M = (M << 1) | static_cast<uint8_t>(previous_C);
+
+        _registers.set_psr_Z_if_zero(M);
+        _registers.set_psr_N_if_negative(M);
+
+        _registers.set_a(M);
+    }
+    break;
+
     case Instruction::SBC:
         // A,Z,C,N = A-M-(1-C)
         // NOTE: Normally decimal mode is disabled and ADC/SBC perform
@@ -910,6 +937,7 @@ bool CPU6502::process_instruction(Instruction instruction, uint8_t M)
 
         if (_registers.psr_D())
         {
+            std::cout << _registers << "  " << *this << std::endl;
             fail_fast("Decimal mode not implemented");
         }
         else
@@ -976,6 +1004,7 @@ void CPU6502::process_addressing_mode_absolute(Instruction instruction, uint16_t
             // An original 6502 has does not correctly fetch the target address if the indirect vector falls on a page
             // boundary (e.g. $xxFF where xx is any value from $00 to $FF).
             // In this case fetches the LSB from $xxFF as expected but takes the MSB from $xx00.
+            std::cout << _registers << "  " << *this << std::endl;
             fail_fast("JMP bug hit");
         }
         _registers.set_pc(addr);
@@ -1038,6 +1067,7 @@ void CPU6502::process_addressing_mode_absolute(Instruction instruction, uint16_t
         _memory.set_byte_at(addr, _registers.y());
         break;
     default:
+        std::cout << _registers << "  " << *this << std::endl;
         fail_fast("Invalid instruction");
         break;
     }
@@ -1081,6 +1111,7 @@ uint8_t CPU6502::get_resolved_byte(uint8_t value, AddressingMode addressing_mode
     }
     break;
     default:
+        std::cout << _registers << "  " << *this << std::endl;
         fail_fast("Invalid addressing mode");
         break;
     }
@@ -1197,6 +1228,7 @@ void CPU6502::process_addressing_mode_byte(uint8_t operand_value, Instruction in
         set_resolved_byte(operand_value, addressing_mode, _registers.y());
         break;
     default:
+        std::cout << _registers << "  " << *this << std::endl;
         fail_fast("Invalid instruction");
         break;
     }
@@ -1222,6 +1254,7 @@ uint16_t CPU6502::resolve_address(uint16_t value, AddressingMode addressing_mode
         value = _memory.get_word_at(value);
         break;
     default:
+        std::cout << _registers << "  " << *this << std::endl;
         fail_fast("Invalid addressing mode");
         break;
     }
@@ -1253,6 +1286,7 @@ void CPU6502::process_addressing_mode_word(uint16_t operand_value, Instruction i
         _memory.set_byte_at(addr, _registers.a());
         break;
     default:
+        std::cout << _registers << "  " << *this << std::endl;
         fail_fast("Invalid instruction");
         break;
     }

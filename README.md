@@ -50,13 +50,13 @@ _Optional: `--clean-first` and/or `--config RelWithDebInfo`_
 ## Run
 
 ```PowerShell
-build\RelWithDebInfo\asteroids-emu.exe
+build\Debug\asteroids-emu.exe
 ```
 
 ## Install
 
 ```PowerShell
-cmake.exe --install build --config RelWithDebInfo
+cmake.exe --install build --config Debug
 ```
 
 ## MAME ROMS

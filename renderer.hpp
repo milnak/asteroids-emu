@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+void fail_fast(const char *msg);
+
 struct SDL_Window;
 struct SDL_Renderer;
 

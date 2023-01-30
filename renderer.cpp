@@ -100,4 +100,6 @@ void Renderer::draw_line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uin
     SDL_SetRenderDrawColor(_renderer, 255, 255, 255, intensity * 17 /* Convert to 0..255 */);
 
     SDL_RenderDrawLine(_renderer, x1, y1, x2, y2);
+
+    // present();
 }

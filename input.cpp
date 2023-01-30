@@ -70,9 +70,6 @@ namespace Input
             // Tilt
             memory.mmio.set_IN0_SWSLAM(mem_val);
             break;
-        case SDLK_F1:
-            memory.mmio.set_IN0_SWTEST(mem_val);
-            break;
         }
     }
 
